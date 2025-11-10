@@ -1,16 +1,31 @@
 import os
 import pyodbc
+import logging
 from flask import Flask, g, redirect, render_template, request, url_for
 
 app = Flask(__name__)
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 
 def get_db():
     if "db" not in g:
-        conn_str = os.environ.get("AZURE_SQL_CONNECTIONSTRING")
+        # Try multiple environment variable formats (Azure prefixes connection strings)
+        conn_str = (
+            os.environ.get("AZURE_SQL_CONNECTIONSTRING") or 
+            os.environ.get("SQLAZURECONNSTR_AZURE_SQL_CONNECTIONSTRING")
+        )
         if not conn_str:
+            logging.error("Available env vars: %s", list(os.environ.keys()))
             raise RuntimeError("AZURE_SQL_CONNECTIONSTRING env var is not set")
-        g.db = pyodbc.connect(conn_str, autocommit=False)
+        
+        try:
+            g.db = pyodbc.connect(conn_str, autocommit=False)
+            logging.info("Database connection successful")
+        except Exception as e:
+            logging.error("Database connection failed: %s", e)
+            raise
     return g.db
 
 
@@ -43,9 +58,16 @@ def init_db():
     db.commit()
 
 
+@app.route('/health')
+def health():
+    return "App is running! No database connection needed."
+
+
 @app.before_request
 def ensure_db():
-    init_db()
+    # Only initialize DB for non-health routes
+    if request.endpoint != 'health':
+        init_db()
 
 
 @app.route("/", methods=["GET", "POST"])

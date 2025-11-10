@@ -96,12 +96,28 @@ pyodbc.InterfaceError: ('28000', "Login failed for user 'danishumer'")
 - Reset SQL Server admin password
 - **Final Solution**: Used correct ODBC parameter names (`UID`/`PWD` instead of `Uid`/`Pwd`)
 
-### 6. Connection String Format Issues
+### 6. **Connection String Format Issues**
 **Problem**: Various connection string formats failed
 **Working Solution**:
 ```
 Driver={ODBC Driver 17 for SQL Server};Server=tcp:laser.database.windows.net,1433;Database=notesdb;UID=danishumer;PWD=password@1;Encrypt=yes;
 ```
+
+### 7. **Duplicate Flask Route Definitions**
+**Problem**:
+```
+AssertionError: View function mapping is overwriting an existing endpoint function: health
+```
+**Solution**: Removed duplicate `/health` route definitions, kept only one.
+
+### 8. **Startup Script Path Issues** 
+**Problem**:
+```
+/opt/startup/startup.sh: 23: startup.sh: not found (Exit Code 127)
+```
+**Solutions**:
+- **Option A**: Set startup command directly in Portal: `gunicorn --bind=0.0.0.0:8000 --workers=1 app:app`
+- **Option B**: Keep [`startup.sh`](startup.sh ) file with same command for consistency
 
 ## Database Schema
 The application automatically creates the following table:
@@ -131,12 +147,22 @@ learningCloud/
 3. **Azure Networking**: Firewall rules and public access settings must be configured correctly
 4. **SQL Authentication**: Server admin credentials vs database users can be confusing
 5. **Case Sensitivity**: ODBC connection parameters are case-sensitive (`UID` vs `Uid`)
+6. **Startup Commands**: Both Portal startup command and [`startup.sh`](startup.sh ) file should contain: `gunicorn --bind=0.0.0.0:8000 --workers=1 app:app`
+7. **Deployment Success**: After fixing duplicate Flask routes and startup configuration, app deployed successfully
+
+## Deployment Success ✅
+**Final working configuration:**
+- **Startup Command**: `gunicorn --bind=0.0.0.0:8000 --workers=1 app:app` (set in Portal)
+- **Connection String**: `Driver={ODBC Driver 17 for SQL Server};Server=tcp:laser.database.windows.net,1433;Database=notesdb;UID=danishumer;PWD=password@1;Encrypt=yes;`
+- **Live URL**: `https://notes-app-danish.azurewebsites.net`
+- **Database**: Azure SQL Database with notes table
+- **Environment**: Azure App Service (Linux) with Python 3.12
 
 ## Next Steps
-- Deploy to Azure App Service
-- Configure production environment variables
+- ✅ ~~Deploy to Azure App Service~~ **COMPLETED**
+- ✅ ~~Configure production environment variables~~ **COMPLETED**
 - Set up CI/CD pipeline
-- Add error handling and logging
+- Add error handling and logging  
 - Implement user authentication
 
 ## Environment Variables Required
