@@ -49,6 +49,7 @@ def init_db():
             BEGIN
                 CREATE TABLE notes (
                     id INT IDENTITY(1,1) PRIMARY KEY,
+                    section NVARCHAR(50) NOT NULL,
                     content NVARCHAR(MAX) NOT NULL,
                     created_at DATETIME2 DEFAULT SYSUTCDATETIME()
                 )
@@ -75,19 +76,28 @@ def index():
     db = get_db()
     if request.method == "POST":
         content = request.form.get("content", "").strip()
-        if content:
+        section = request.form.get("section", "").strip()
+        if content and section:
             with db.cursor() as cursor:
-                cursor.execute("INSERT INTO notes (content) VALUES (?)", content)
+                cursor.execute("INSERT INTO notes (section, content) VALUES (?, ?)", section, content)
             db.commit()
         return redirect(url_for("index"))
 
-    with db.cursor() as cursor:
-        cursor.execute(
-            "SELECT id, content, created_at FROM notes ORDER BY created_at DESC"
-        )
-        columns = [col[0] for col in cursor.description]
-        notes = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    return render_template("index.html", notes=notes)
+    # Get notes for each section
+    db = get_db()
+    sections = ['order', 'serial', 'rma']
+    all_notes = {}
+    
+    for section in sections:
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, content, created_at FROM notes WHERE section = ? ORDER BY created_at DESC",
+                section
+            )
+            columns = [col[0] for col in cursor.description]
+            all_notes[section] = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    return render_template("index.html", all_notes=all_notes)
 
 
 if __name__ == "__main__":
